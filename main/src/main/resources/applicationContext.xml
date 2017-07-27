@@ -1,0 +1,346 @@
+﻿<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-4.0.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- 系统参数配置 -->
+    <bean id="systemConfig" class="gsunis.monitor.viewentity.SystemConfig">
+        <!-- 当前站号 -->
+        <property name="stationId" value="29187"></property>
+        <!-- 收费监控IP-本机机构 -->
+        <property name="ip" value="192.168.1.123"></property>
+        <!-- 收费监控restful端口号-本机机构 -->
+        <property name="restfulPort" value="8090"></property>
+        <!-- 收费监控websocket端口号-本机机构 -->
+        <property name="websocketPort" value="8091"></property>
+        <!-- 收费监控tcp端口号-本机机构 -->
+        <property name="tcpPort" value="8092"></property>
+        <!-- 收费监控IP-上级收费所 -->
+        <property name="subcenterIp" value="192.168.1.123"></property>
+        <!-- 收费监控restful端口号-上级收费所 -->
+        <property name="subcenterRestfulPort" value="8090"></property>
+        <!-- 收费监控IP-收费中心 -->
+        <property name="centerIp" value="10.62.0.27"></property>
+        <!-- 收费监控restful端口号-收费中心 -->
+        <property name="centerRestfulPort" value="8200"></property>
+    </bean>
+
+    <!-- 引入log4j配置文件 -->
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>log4j.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 配置数据源 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 基本属性 url、user、password -->
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://127.0.0.1:3306/encs_station_weiyuan?characterEncoding=UTF-8"/>
+        <property name="username" value="root"/>
+        <property name="password" value="root"/>
+
+        <!-- 配置初始化大小、最小、最大 -->
+        <property name="initialSize" value="1"/>
+        <property name="minIdle" value="1"/>
+        <property name="maxActive" value="20"/>
+
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="60000"/>
+
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="60000"/>
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="300000"/>
+
+        <property name="validationQuery" value="SELECT 'x'"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnBorrow" value="false"/>
+        <property name="testOnReturn" value="false"/>
+
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+        <property name="poolPreparedStatements" value="false"/>
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="20"/>
+
+        <!-- 配置监控统计拦截的filters -->
+        <property name="filters" value="stat"/>
+    </bean>
+
+    <!-- 配置Hubernate -->
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource">
+            <ref bean="dataSource"/>
+        </property>
+        <!-- 映射文件 -->
+        <property name="mappingLocations">
+            <list>
+                <value>DeviceStateEntity.hbm.xml</value>
+                <value>DictCardDetailTypeEntity.hbm.xml</value>
+                <value>DictLaneTypeEntity.hbm.xml</value>
+                <value>DictLogicFailTypeEntity.hbm.xml</value>
+                <value>DictNodeTypeEntity.hbm.xml</value>
+                <value>DictPayCardTypeEntity.hbm.xml</value>
+                <value>DictShiftTypeEntity.hbm.xml</value>
+                <value>DictSpecailTypeEntity.hbm.xml</value>
+                <value>DictVehicleCaseEntity.hbm.xml</value>
+                <value>DictVehicleClassEntity.hbm.xml</value>
+                <value>DictVehicleSortEntity.hbm.xml</value>
+                <value>DictVehicleWeightLimitTypeEntity.hbm.xml</value>
+                <value>LogicFailEntity.hbm.xml</value>
+                <value>LoginRecordEntity.hbm.xml</value>
+                <value>NetworkStateEntity.hbm.xml</value>
+                <value>NetworkStateHistoryEntyity.hbm.xml</value>
+                <value>NodeEntity.hbm.xml</value>
+                <value>OrganEntity.hbm.xml</value>
+                <value>SpecialEntity.hbm.xml</value>
+                <value>UserEntity.hbm.xml</value>
+                <value>VersionLaneBlackErrorRecordEntity.hbm.xml</value>
+                <value>VersionLaneEntity.hbm.xml</value>
+                <value>VersionLaneSoftErrorRecordEntity.hbm.xml</value>
+                <value>WasteEntity.hbm.xml</value>
+                <value>TableVerEntity.hbm.xml</value>
+                <value>LaneBaseInfoEntity.hbm.xml</value>
+            </list>
+        </property>
+        <property name="hibernateProperties">
+            <props>
+                <!-- 指定数据库方言 -->
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                <!-- 显示Hibernate持久化操作所生成的SQL -->
+                <prop key="hibernate.show_sql">false</prop>
+                <!-- 将SQL脚本进行格式化后再输出 -->
+                <prop key="hibernate.format_sql">false</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- 配置Hibernate事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+    <!-- 启用事务注解-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- BLL层bean注入区域开始 ***************************************************************************************************** -->
+    <!--车道节点-->
+    <bean id="nodeBLL" class="gsunis.monitor.bll.NodeBLL">
+        <property name="nodeDAL" ref="nodeDAL"/>
+    </bean>
+    <!--收费参数-->
+    <bean id="tollParameterBLL" class="gsunis.monitor.bll.TollParameterBLL">
+        <property name="tollParameterDAL" ref="tollParameterDAL"/>
+    </bean>
+    <!--设备日志-->
+    <bean id="deviceBLL" class="gsunis.monitor.bll.DeviceBLL">
+        <property name="deviceDAL" ref="deviceDAL"/>
+    </bean>
+    <!--数据字典-->
+    <bean id="dicBLL" class="gsunis.monitor.bll.DictBLL">
+        <property name="dictDAL" ref="dictDAL"/>
+    </bean>
+    <!--特殊操作-->
+    <bean id="specialBLL" class="gsunis.monitor.bll.SpecialBLL">
+        <property name="specialDAL" ref="specialDAL"/>
+    </bean>
+    <!--车道网络-->
+    <bean id="networkStateBLL" class="gsunis.monitor.bll.NetworkStateBLL">
+        <property name="networkStateDAL" ref="networkStateDAL"/>
+    </bean>
+    <!--特殊流水-->
+    <bean id="specialWasteBLL" class="gsunis.monitor.bll.SpecialWasteBLL">
+        <property name="specialWasteDAL" ref="specialWasteDAL"/>
+    </bean>
+    <!--通行故障-->
+    <bean id="logicFailBLL" class="gsunis.monitor.bll.LogicFailBLL">
+        <property name="logicFailDAL" ref="logicFailDAL"/>
+    </bean>
+    <!--组织机构-->
+    <bean id="organBLL" class="gsunis.monitor.bll.OrganBLL">
+        <property name="organDAL" ref="organDAL"/>
+    </bean>
+    <!--登陆日志-->
+    <bean id="loginRecordBLL" class="gsunis.monitor.bll.LoginRecordBLL">
+        <property name="loginRecordDAL" ref="loginRecordDAL"/>
+    </bean>
+    <!--用户管理-->
+    <bean id="userBLL" class="gsunis.monitor.bll.UserBLL">
+        <property name="userDAL" ref="userDAL"/>
+    </bean>
+    <!--班次管理-->
+    <bean id="shiftBLL" class="gsunis.monitor.bll.ShiftBLL">
+    </bean>
+
+    <!-- BLL层bean注入区域结束 ***************************************************************************************************** -->
+
+
+    <!-- DAL层bean注入区域开始 ***************************************************************************************************** -->
+    <!--车道节点-->
+    <bean id="nodeDAL" class="gsunis.monitor.dal.NodeDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--收费参数-->
+    <bean id="tollParameterDAL" class="gsunis.monitor.dal.TollParameterDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--设备日志-->
+    <bean id="deviceDAL" class="gsunis.monitor.dal.DeviceDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--数据字典-->
+    <bean id="dictDAL" class="gsunis.monitor.dal.DicDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--特殊操作-->
+    <bean id="specialDAL" class="gsunis.monitor.dal.SpecialDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--车道网络-->
+    <bean id="networkStateDAL" class="gsunis.monitor.dal.NetworkStateDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--特殊流水-->
+    <bean id="specialWasteDAL" class="gsunis.monitor.dal.SpecialWasteDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--通行故障-->
+    <bean id="logicFailDAL" class="gsunis.monitor.dal.LogicFailDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--组织机构-->
+    <bean id="organDAL" class="gsunis.monitor.dal.OrganDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--登陆日志-->
+    <bean id="loginRecordDAL" class="gsunis.monitor.dal.LoginRecordDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+    <!--用户管理-->
+    <bean id="userDAL" class="gsunis.monitor.dal.UserDAL">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+    <!-- DAL层bean注入区域结束 ***************************************************************************************************** -->
+
+    <!-- Job bean注入区域开始 ***************************************************************************************************** -->
+
+    <!--收费参数JOB配置-->
+    <bean id="tollParameterJob" class="gsunis.monitor.job.TollParameterJob"></bean>
+    <bean id="tollParameterTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="tollParameterJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="tollParameterTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="tollParameterTask"/>
+        <property name="cronExpression" value="0 0/2 * * * ?"/>
+    </bean>
+
+    <!--车道网络状态JOB配置-->
+    <bean id="laneNetworkJob" class="gsunis.monitor.job.LaneNetworkJob"></bean>
+    <bean id="laneNetworkTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="laneNetworkJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="laneNetworkTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="laneNetworkTask"/>
+        <property name="cronExpression" value="0 0/2 * * * ?"/>
+    </bean>
+
+    <!--服务器状态JOB配置-->
+    <bean id="serverStateJob" class="gsunis.monitor.job.ServerStateJob"></bean>
+    <bean id="serverStateTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="serverStateJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="serverStateTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="serverStateTask"/>
+        <property name="cronExpression" value="0 0/2 * * * ?"/>
+    </bean>
+
+    <!--特殊操作JOB配置-->
+    <bean id="specialOperationJob" class="gsunis.monitor.job.SpecialOperationJob"></bean>
+    <bean id="specialOperationTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="specialOperationJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="specialOperationTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="specialOperationTask"/>
+        <property name="cronExpression" value="0 0/2 * * * ?"/>
+    </bean>
+
+    <!--通行故障JOB配置-->
+    <bean id="LogicFailJob" class="gsunis.monitor.job.LogicFailJob"></bean>
+    <bean id="logicFailTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="LogicFailJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="logicFailTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="logicFailTask"/>
+        <property name="cronExpression" value="0 0/2 * * * ?"/>
+    </bean>
+
+    <!--心跳检查JOB配置-->
+    <bean id="heartBeatCheckJob" class="gsunis.monitor.job.HeartBeatCheckJob"></bean>
+    <bean id="heartBeatCheckTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="heartBeatCheckJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="heartBeatCheckTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="heartBeatCheckTask"/>
+        <property name="cronExpression" value="0 0/1 * * * ?"/>
+    </bean>
+
+    <!--获取当前班次信息JOB配置-->
+    <bean id="shiftChangeJob" class="gsunis.monitor.job.ShiftChangeJob"></bean>
+    <bean id="shiftChangeTask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="shiftChangeJob"/>
+        <property name="targetMethod" value="execute"/>
+    </bean>
+    <bean id="shiftChangeTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="shiftChangeTask"/>
+        <property name="cronExpression" value="0 0 0,8,16 * * ? "/>
+    </bean>
+
+    <!-- lazy-init=false则意味着启动Spring容器时就会执行Job  -->
+    <bean id="startQuertz" lazy-init="true" autowire="no"
+          class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="tollParameterTrigger"/>
+                <ref bean="specialOperationTrigger"/>
+                <ref bean="logicFailTrigger"/>
+                <ref bean="laneNetworkTrigger"/>
+                <ref bean="serverStateTrigger"/>
+                <ref bean="heartBeatCheckTrigger"/>
+                <ref bean="shiftChangeTrigger"/>
+            </list>
+        </property>
+    </bean>
+    <!-- Job bean注入区域结束 ***************************************************************************************************** -->
+
+</beans>
+
